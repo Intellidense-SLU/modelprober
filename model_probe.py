@@ -151,12 +151,45 @@ class HTTPClient:
   return status, body, resp_hdrs
 
  # ── debug pretty-print (thread-safe) ─────────────────────────
+ def _redact_header_value(self, name: str, value: str) -> str:
+  """
+  Redact potentially sensitive header values before logging.
+  Keeps behaviour of showing a short prefix for secrets while
+  avoiding full clear-text exposure.
+  """
+  if value is None:
+   return ""
+  name_lc = name.lower()
+  # Always treat Authorization specially to keep existing behaviour.
+  if name_lc == "authorization":
+   return f"Bearer {self.api_key[:8]}…"
+  sensitive_keywords = (
+   "authorization",
+   "proxy-authorization",
+   "x-api-key",
+   "api-key",
+   "x-auth-token",
+   "auth-token",
+   "authentication",
+   "token",
+   "secret",
+   "password",
+   "cookie",
+   "set-cookie",
+  )
+  if any(kw in name_lc for kw in sensitive_keywords):
+   # Show only a short prefix if non-empty, otherwise just mark redacted.
+   prefix = value[:8] + "…" if value else ""
+   return f"{prefix} <redacted>"
+  # For non-sensitive headers, avoid logging unboundedly long values.
+  return value if len(value) <= 256 else value[:256] + "…"
+
  def _dbg_request(self, method, url, hdrs, body):
   with self._print_lock:
    print(f"\n{_c('d', '┌──')} {_c('mag', f'{method} {url}')}")
    for k, v in hdrs.items():
-    val = f"Bearer {self.api_key[:8]}…" if k == "Authorization" else v
-    print(f"{_c('d', '│')} {_c('d', '→')} {k}: {val}")
+    safe_val = self._redact_header_value(str(k), str(v))
+    print(f"{_c('d', '│')} {_c('d', '→')} {k}: {safe_val}")
    if body:
     print(f"{_c('d', '│')} {_c('d', '→ Body:')} {json.dumps(body, indent=2)[:600]}")
 
