@@ -609,7 +609,7 @@ def build_parser() -> argparse.ArgumentParser:
  p.add_argument("--fast", "-f", action="store_true",
   help="Ultra-fast parallel scan: online/offline check only")
  p.add_argument("--workers", "-w", type=int, default=2,
-  help="Parallel workers for --fast mode (default: 10)")
+  help="Parallel workers for --fast mode (default: 2)")
  p.add_argument("--all", "-a", action="store_true",
   help="Select all models (skip interactive picker)")
  p.add_argument("--version", "-V", action="version",
